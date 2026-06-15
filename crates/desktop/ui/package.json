@@ -1,0 +1,16 @@
+{
+  "name": "nannou-manager-ui",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "esbuild src/main.js --bundle --format=iife --outfile=main.js",
+    "watch": "esbuild src/main.js --bundle --format=iife --outfile=main.js --watch"
+  },
+  "dependencies": {
+    "lucide": "next"
+  },
+  "devDependencies": {
+    "esbuild": "^0.24.0"
+  }
+}

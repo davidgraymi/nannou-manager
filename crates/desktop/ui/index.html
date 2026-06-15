@@ -12,22 +12,28 @@
     <aside class="sidebar">
       <div class="sidebar-header">
         <span class="sidebar-title">Projects</span>
-        <button class="icon-btn" id="btn-new" title="New project">+</button>
+        <div class="sidebar-header-actions">
+          <button class="icon-btn" id="btn-clone" title="Clone from git"></button>
+          <button class="icon-btn" id="btn-new" title="New project"></button>
+        </div>
       </div>
       <div class="project-list" id="project-list">
         <div class="list-placeholder">Loading…</div>
       </div>
       <div class="sidebar-footer">
-        <button class="icon-btn" id="btn-settings" title="Settings">⚙</button>
+        <button class="icon-btn" id="btn-settings" title="Settings"></button>
       </div>
     </aside>
 
     <!-- Main content -->
     <main class="content" id="content">
       <div class="empty-state">
-        <div class="empty-icon">⬡</div>
+        <div class="empty-icon"></div>
         <p>Select a project or create a new one</p>
-        <button class="btn btn-primary" id="btn-new-empty">New Project</button>
+        <div class="empty-state-actions">
+          <button class="btn btn-primary" id="btn-new-empty">New Project</button>
+          <button class="btn btn-ghost" id="btn-import-empty">Import</button>
+        </div>
       </div>
     </main>
   </div>
@@ -42,6 +48,64 @@
       <div class="modal-actions">
         <button class="btn btn-ghost" id="cancel-create-btn">Cancel</button>
         <button class="btn btn-primary" id="create-btn">Create</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Clone Project Modal -->
+  <div class="modal-overlay hidden" id="modal-clone">
+    <div class="modal">
+      <h2>Clone from Git</h2>
+      <label for="clone-url">Repository URL</label>
+      <input type="text" id="clone-url" placeholder="git@github.com:user/repo.git" autocomplete="off" spellcheck="false" />
+      <label for="clone-name">Folder name</label>
+      <input type="text" id="clone-name" placeholder="(leave blank to use repo name)" autocomplete="off" spellcheck="false" />
+      <div class="modal-error hidden" id="clone-error"></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="cancel-clone-btn">Cancel</button>
+        <button class="btn btn-primary" id="confirm-clone-btn">Clone</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Copy Project Modal -->
+  <div class="modal-overlay hidden" id="modal-copy">
+    <div class="modal">
+      <h2>Copy Project</h2>
+      <label for="copy-name">New project name</label>
+      <input type="text" id="copy-name" placeholder="my-sketch-copy" autocomplete="off" spellcheck="false" />
+      <div class="modal-error hidden" id="copy-error"></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="cancel-copy-btn">Cancel</button>
+        <button class="btn btn-primary" id="confirm-copy-btn">Copy</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Confirm Modal -->
+  <div class="modal-overlay hidden" id="modal-delete">
+    <div class="modal">
+      <h2>Delete Project</h2>
+      <p class="modal-text" id="delete-text">Delete project?</p>
+      <p class="modal-warning">This permanently removes the project folder from disk.</p>
+      <div class="modal-error hidden" id="delete-error"></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="cancel-delete-btn">Cancel</button>
+        <button class="btn btn-danger" id="confirm-delete-btn">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Git Remote Modal -->
+  <div class="modal-overlay hidden" id="modal-remote">
+    <div class="modal">
+      <h2>Set Git Remote</h2>
+      <label for="remote-url">Remote URL (origin)</label>
+      <input type="text" id="remote-url" placeholder="git@github.com:user/repo.git" autocomplete="off" spellcheck="false" />
+      <div class="modal-error hidden" id="remote-error"></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="cancel-remote-btn">Cancel</button>
+        <button class="btn btn-primary" id="confirm-remote-btn">Save</button>
       </div>
     </div>
   </div>
