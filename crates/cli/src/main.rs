@@ -35,6 +35,38 @@ enum Commands {
         name: String,
     },
 
+    /// Delete a project from disk
+    Delete {
+        /// Project name
+        name: String,
+
+        /// Skip the confirmation prompt
+        #[arg(short = 'y', long)]
+        yes: bool,
+    },
+
+    /// Copy a project to a new name
+    Copy {
+        /// Existing project name
+        from: String,
+        /// New project name
+        to: String,
+    },
+
+    /// Clone a project from a git URL into the projects directory
+    Clone {
+        /// Repository URL
+        url: String,
+        /// Folder name (defaults to the repo name)
+        name: Option<String>,
+    },
+
+    /// Git operations on a project
+    Git {
+        #[command(subcommand)]
+        action: GitAction,
+    },
+
     /// Manage configuration
     Config {
         #[command(subcommand)]
@@ -60,6 +92,107 @@ enum ConfigAction {
     },
 }
 
+#[derive(Subcommand)]
+enum GitAction {
+    /// Show git status for a project
+    Status {
+        /// Project name
+        name: String,
+    },
+
+    /// Initialize a git repository in a project
+    Init {
+        /// Project name
+        name: String,
+    },
+
+    /// Set (or change) the origin remote URL
+    Remote {
+        /// Project name
+        name: String,
+        /// Remote URL
+        url: String,
+    },
+
+    /// Stage all changes, commit, and push
+    Sync {
+        /// Project name
+        name: String,
+        /// Commit message
+        #[arg(short, long, default_value = "Update")]
+        message: String,
+    },
+
+    /// Pull (fast-forward only) from the configured remote
+    Pull {
+        /// Project name
+        name: String,
+    },
+}
+
+fn resolve_project(config: &Config, name: &str) -> ProjectInfo {
+    match scan_projects(&config.projects_dir)
+        .into_iter()
+        .find(|p| p.name == name)
+    {
+        Some(p) => p,
+        None => {
+            eprintln!("Project '{name}' not found in {}", config.projects_dir);
+            std::process::exit(1);
+        }
+    }
+}
+
+fn unwrap_or_exit<T>(result: Result<T, String>) -> T {
+    match result {
+        Ok(v) => v,
+        Err(e) => {
+            eprintln!("Error: {e}");
+            std::process::exit(1);
+        }
+    }
+}
+
+fn name_from_git_url(url: &str) -> String {
+    let cleaned = url.trim().trim_end_matches('/').trim_end_matches(".git");
+    let cut = cleaned
+        .rfind(|c| c == '/' || c == ':')
+        .map(|i| i + 1)
+        .unwrap_or(0);
+    cleaned[cut..].to_string()
+}
+
+fn confirm(prompt: &str) -> bool {
+    use std::io::{self, Write};
+    print!("{prompt} [y/N]: ");
+    io::stdout().flush().ok();
+    let mut buf = String::new();
+    if io::stdin().read_line(&mut buf).is_err() {
+        return false;
+    }
+    matches!(buf.trim(), "y" | "Y" | "yes" | "YES")
+}
+
+fn print_git_status(status: &GitStatus) {
+    if !status.initialized {
+        println!("No git repository");
+        return;
+    }
+    println!(
+        "Branch  : {}",
+        status.branch.as_deref().unwrap_or("(detached)")
+    );
+    println!("Remote  : {}", status.remote.as_deref().unwrap_or("(none)"));
+    println!(
+        "Working : {}",
+        if status.dirty { "dirty" } else { "clean" }
+    );
+    if status.remote.is_some() {
+        println!("Ahead   : {}", status.ahead);
+        println!("Behind  : {}", status.behind);
+    }
+}
+
 fn main() {
     let cli = Cli::parse();
     let config = load_config();
@@ -76,46 +209,76 @@ fn main() {
             }
         }
 
-        Commands::New { name } => match create_project(&config, &name) {
-            Ok(()) => println!("Created project '{name}' in {}", config.projects_dir),
-            Err(e) => {
-                eprintln!("Error: {e}");
-                std::process::exit(1);
-            }
-        },
+        Commands::New { name } => {
+            unwrap_or_exit(create_project(&config, &name));
+            println!("Created project '{name}' in {}", config.projects_dir);
+        }
 
         Commands::Run { name } => {
-            let projects = scan_projects(&config.projects_dir);
-            let Some(project) = projects.iter().find(|p| p.name == name) else {
-                eprintln!("Project '{name}' not found in {}", config.projects_dir);
-                std::process::exit(1);
-            };
+            let project = resolve_project(&config, &name);
             println!("Running '{name}' (cargo run --release)...");
-            match spawn_project(&project.path) {
-                Ok(mut child) => {
-                    let _ = child.wait();
-                }
-                Err(e) => {
-                    eprintln!("Error: {e}");
-                    std::process::exit(1);
-                }
-            }
+            let mut child = unwrap_or_exit(spawn_project(&project.path));
+            let _ = child.wait();
         }
 
         Commands::Open { name } => {
-            let projects = scan_projects(&config.projects_dir);
-            let Some(project) = projects.iter().find(|p| p.name == name) else {
-                eprintln!("Project '{name}' not found in {}", config.projects_dir);
-                std::process::exit(1);
-            };
-            match open_in_editor(&config.editor_cmd, &project.path) {
-                Ok(()) => println!("Opened '{name}' in {}", config.editor_cmd),
-                Err(e) => {
-                    eprintln!("Error: {e}");
-                    std::process::exit(1);
-                }
-            }
+            let project = resolve_project(&config, &name);
+            unwrap_or_exit(open_in_editor(&config.editor_cmd, &project.path));
+            println!("Opened '{name}' in {}", config.editor_cmd);
         }
+
+        Commands::Delete { name, yes } => {
+            let project = resolve_project(&config, &name);
+            if !yes && !confirm(&format!("Delete '{name}' at {}?", project.path)) {
+                println!("Aborted.");
+                return;
+            }
+            unwrap_or_exit(delete_project(&project.path));
+            println!("Deleted '{name}'");
+        }
+
+        Commands::Copy { from, to } => {
+            let project = resolve_project(&config, &from);
+            unwrap_or_exit(copy_project(&project.path, &config.projects_dir, &to));
+            println!("Copied '{from}' to '{to}'");
+        }
+
+        Commands::Clone { url, name } => {
+            let target_name = name.unwrap_or_else(|| name_from_git_url(&url));
+            if target_name.is_empty() {
+                eprintln!("Error: could not determine folder name from URL");
+                std::process::exit(1);
+            }
+            unwrap_or_exit(git_clone(&url, &config.projects_dir, &target_name));
+            println!("Cloned '{target_name}' into {}", config.projects_dir);
+        }
+
+        Commands::Git { action } => match action {
+            GitAction::Status { name } => {
+                let project = resolve_project(&config, &name);
+                print_git_status(&git_status(&project.path));
+            }
+            GitAction::Init { name } => {
+                let project = resolve_project(&config, &name);
+                unwrap_or_exit(git_init(&project.path));
+                println!("Initialized git repository in '{name}'");
+            }
+            GitAction::Remote { name, url } => {
+                let project = resolve_project(&config, &name);
+                unwrap_or_exit(git_set_remote(&project.path, &url));
+                println!("Set origin to '{url}' for '{name}'");
+            }
+            GitAction::Sync { name, message } => {
+                let project = resolve_project(&config, &name);
+                unwrap_or_exit(git_sync(&project.path, &message));
+                println!("Synced '{name}'");
+            }
+            GitAction::Pull { name } => {
+                let project = resolve_project(&config, &name);
+                unwrap_or_exit(git_pull(&project.path));
+                println!("Pulled '{name}'");
+            }
+        },
 
         Commands::Config { action } => match action {
             ConfigAction::Show => {
@@ -126,24 +289,14 @@ fn main() {
             ConfigAction::SetDir { path } => {
                 let mut c = config;
                 c.projects_dir = path.clone();
-                match save_config(&c) {
-                    Ok(()) => println!("Projects directory set to '{path}'"),
-                    Err(e) => {
-                        eprintln!("Error: {e}");
-                        std::process::exit(1);
-                    }
-                }
+                unwrap_or_exit(save_config(&c));
+                println!("Projects directory set to '{path}'");
             }
             ConfigAction::SetEditor { cmd } => {
                 let mut c = config;
                 c.editor_cmd = cmd.clone();
-                match save_config(&c) {
-                    Ok(()) => println!("Editor set to '{cmd}'"),
-                    Err(e) => {
-                        eprintln!("Error: {e}");
-                        std::process::exit(1);
-                    }
-                }
+                unwrap_or_exit(save_config(&c));
+                println!("Editor set to '{cmd}'");
             }
         },
     }
