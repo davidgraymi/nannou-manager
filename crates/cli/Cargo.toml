@@ -1,0 +1,13 @@
+[package]
+name = "nannou-manager-cli"
+version = "0.1.0"
+edition = "2021"
+description = "CLI for managing nannou projects"
+
+[[bin]]
+name = "nannou-manager"
+path = "src/main.rs"
+
+[dependencies]
+nannou-manager-core = { path = "../core" }
+clap = { version = "4", features = ["derive"] }

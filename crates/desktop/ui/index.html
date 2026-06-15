@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nannou Manager</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <span class="sidebar-title">Projects</span>
+        <button class="icon-btn" id="btn-new" title="New project">+</button>
+      </div>
+      <div class="project-list" id="project-list">
+        <div class="list-placeholder">Loading…</div>
+      </div>
+      <div class="sidebar-footer">
+        <button class="icon-btn" id="btn-settings" title="Settings">⚙</button>
+      </div>
+    </aside>
+
+    <!-- Main content -->
+    <main class="content" id="content">
+      <div class="empty-state">
+        <div class="empty-icon">⬡</div>
+        <p>Select a project or create a new one</p>
+        <button class="btn btn-primary" id="btn-new-empty">New Project</button>
+      </div>
+    </main>
+  </div>
+
+  <!-- New Project Modal -->
+  <div class="modal-overlay hidden" id="modal-new">
+    <div class="modal">
+      <h2>New Project</h2>
+      <label for="new-project-name">Project name</label>
+      <input type="text" id="new-project-name" placeholder="my-sketch" autocomplete="off" spellcheck="false" />
+      <div class="modal-error hidden" id="new-project-error"></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="cancel-create-btn">Cancel</button>
+        <button class="btn btn-primary" id="create-btn">Create</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div class="modal-overlay hidden" id="modal-settings">
+    <div class="modal">
+      <h2>Settings</h2>
+      <label for="settings-projects-dir">Projects directory</label>
+      <input type="text" id="settings-projects-dir" spellcheck="false" />
+      <label for="settings-editor">Editor command</label>
+      <input type="text" id="settings-editor" placeholder="code" spellcheck="false" />
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="cancel-settings-btn">Cancel</button>
+        <button class="btn btn-primary" id="save-settings-btn">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="main.js"></script>
+</body>
+</html>
