@@ -316,6 +316,73 @@ async fn save_config_cmd(config: Config) -> Result<Vec<ProjectInfo>, String> {
     .await?
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn compile_progress_serializes_to_expected_shape() {
+        let p = CompileProgress {
+            name: "demo".into(),
+            artifacts: 7,
+        };
+        let v: serde_json::Value = serde_json::to_value(&p).unwrap();
+        assert_eq!(v["name"], "demo");
+        assert_eq!(v["artifacts"], 7);
+    }
+
+    #[test]
+    fn compile_result_success_has_null_error() {
+        let r = CompileResult {
+            name: "demo".into(),
+            success: true,
+            cancelled: false,
+            error: None,
+        };
+        let v: serde_json::Value = serde_json::to_value(&r).unwrap();
+        assert_eq!(v["name"], "demo");
+        assert_eq!(v["success"], true);
+        assert_eq!(v["cancelled"], false);
+        assert!(v["error"].is_null());
+    }
+
+    #[test]
+    fn compile_result_cancelled_carries_flag() {
+        let r = CompileResult {
+            name: "demo".into(),
+            success: false,
+            cancelled: true,
+            error: None,
+        };
+        let v: serde_json::Value = serde_json::to_value(&r).unwrap();
+        assert_eq!(v["cancelled"], true);
+        assert_eq!(v["success"], false);
+        assert!(v["error"].is_null());
+    }
+
+    #[test]
+    fn compile_result_failure_carries_error_message() {
+        let r = CompileResult {
+            name: "demo".into(),
+            success: false,
+            cancelled: false,
+            error: Some("Compilation failed".into()),
+        };
+        let v: serde_json::Value = serde_json::to_value(&r).unwrap();
+        assert_eq!(v["error"], "Compilation failed");
+    }
+
+    #[test]
+    fn app_state_starts_empty() {
+        let state = AppState {
+            running: Arc::new(Mutex::new(HashMap::new())),
+            compiling: Arc::new(Mutex::new(HashMap::new())),
+        };
+        assert!(state.running.lock().unwrap().is_empty());
+        assert!(state.compiling.lock().unwrap().is_empty());
+    }
+}
+
 fn main() {
     tauri::Builder::default()
         .manage(AppState {

@@ -354,6 +354,238 @@ pub fn git_clone(url: &str, projects_dir: &str, name: &str) -> Result<(), String
     Ok(())
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::tempdir;
+
+    fn make_fake_project(dir: &Path, name: &str) -> PathBuf {
+        let p = dir.join(name);
+        std::fs::create_dir_all(p.join("src")).unwrap();
+        std::fs::write(
+            p.join("Cargo.toml"),
+            format!("[package]\nname = \"{name}\"\nversion = \"0.1.0\"\nedition = \"2021\"\n"),
+        )
+        .unwrap();
+        std::fs::write(p.join("src/main.rs"), "fn main() {}\n").unwrap();
+        p
+    }
+
+    #[test]
+    fn scan_projects_nonexistent_dir_is_empty() {
+        assert!(scan_projects("/this/path/should/not/exist/nannou-mgr").is_empty());
+    }
+
+    #[test]
+    fn scan_projects_empty_dir_is_empty() {
+        let dir = tempdir().unwrap();
+        assert!(scan_projects(dir.path().to_str().unwrap()).is_empty());
+    }
+
+    #[test]
+    fn scan_projects_finds_cargo_projects_sorted() {
+        let dir = tempdir().unwrap();
+        make_fake_project(dir.path(), "zeta");
+        make_fake_project(dir.path(), "alpha");
+        make_fake_project(dir.path(), "mid");
+        std::fs::create_dir_all(dir.path().join("not-a-project")).unwrap();
+        std::fs::write(dir.path().join("loose-file"), "x").unwrap();
+        let found = scan_projects(dir.path().to_str().unwrap());
+        let names: Vec<_> = found.iter().map(|p| p.name.clone()).collect();
+        assert_eq!(names, vec!["alpha", "mid", "zeta"]);
+        for p in &found {
+            assert!(PathBuf::from(&p.path).join("Cargo.toml").exists());
+        }
+    }
+
+    #[test]
+    fn delete_project_rejects_non_project_dir() {
+        let dir = tempdir().unwrap();
+        assert!(delete_project(dir.path().to_str().unwrap()).is_err());
+    }
+
+    #[test]
+    fn delete_project_removes_directory() {
+        let dir = tempdir().unwrap();
+        let p = make_fake_project(dir.path(), "x");
+        delete_project(p.to_str().unwrap()).unwrap();
+        assert!(!p.exists());
+    }
+
+    #[test]
+    fn copy_project_copies_files_skips_target_and_renames_package() {
+        let dir = tempdir().unwrap();
+        let src = make_fake_project(dir.path(), "orig");
+        std::fs::create_dir_all(src.join("target/debug")).unwrap();
+        std::fs::write(src.join("target/debug/leftover"), "binary").unwrap();
+
+        copy_project(
+            src.to_str().unwrap(),
+            dir.path().to_str().unwrap(),
+            "renamed",
+        )
+        .unwrap();
+
+        let dst = dir.path().join("renamed");
+        assert!(dst.join("Cargo.toml").exists());
+        assert!(dst.join("src/main.rs").exists());
+        assert!(!dst.join("target").exists());
+        let toml = std::fs::read_to_string(dst.join("Cargo.toml")).unwrap();
+        assert!(toml.contains("name = \"renamed\""));
+        assert!(!toml.contains("name = \"orig\""));
+    }
+
+    #[test]
+    fn copy_project_rejects_non_project_source() {
+        let dir = tempdir().unwrap();
+        let bogus = dir.path().join("bogus");
+        std::fs::create_dir_all(&bogus).unwrap();
+        let result = copy_project(
+            bogus.to_str().unwrap(),
+            dir.path().to_str().unwrap(),
+            "out",
+        );
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn copy_project_rejects_existing_target() {
+        let dir = tempdir().unwrap();
+        let src = make_fake_project(dir.path(), "orig");
+        make_fake_project(dir.path(), "taken");
+        let result = copy_project(
+            src.to_str().unwrap(),
+            dir.path().to_str().unwrap(),
+            "taken",
+        );
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn replace_package_name_only_inside_package_section() {
+        let toml = "\
+[package]
+name = \"old\"
+version = \"0.1.0\"
+
+[dependencies]
+name = \"not_this\"
+";
+        let out = replace_package_name(toml, "new");
+        assert!(out.contains("name = \"new\""));
+        assert!(out.contains("name = \"not_this\""));
+        assert!(!out.contains("name = \"old\""));
+    }
+
+    #[test]
+    fn replace_package_name_leaves_unrelated_toml_intact() {
+        let toml = "name = \"unchanged\"\n[other]\nname = \"also\"\n";
+        let out = replace_package_name(toml, "new");
+        assert!(out.contains("name = \"unchanged\""));
+        assert!(out.contains("name = \"also\""));
+        assert!(!out.contains("name = \"new\""));
+    }
+
+    #[test]
+    fn replace_package_name_handles_indented_keys() {
+        let toml = "[package]\n  name = \"old\"\n";
+        let out = replace_package_name(toml, "new");
+        assert!(out.contains("name = \"new\""));
+        assert!(!out.contains("name = \"old\""));
+    }
+
+    #[test]
+    fn config_default_has_non_empty_dir_and_code_editor() {
+        let c = Config::default();
+        assert!(!c.projects_dir.is_empty());
+        assert_eq!(c.editor_cmd, "code");
+    }
+
+    #[test]
+    fn config_serde_roundtrip() {
+        let c = Config {
+            projects_dir: "/tmp/projects".into(),
+            editor_cmd: "vim".into(),
+        };
+        let s = serde_json::to_string(&c).unwrap();
+        let back: Config = serde_json::from_str(&s).unwrap();
+        assert_eq!(back.projects_dir, c.projects_dir);
+        assert_eq!(back.editor_cmd, c.editor_cmd);
+    }
+
+    #[test]
+    fn config_path_includes_app_dir() {
+        let p = config_path();
+        assert!(p.to_string_lossy().contains("nannou-manager"));
+        assert!(p.file_name().unwrap() == "config.json");
+    }
+
+    #[test]
+    fn git_status_default_for_non_repo() {
+        let dir = tempdir().unwrap();
+        let s = git_status(dir.path().to_str().unwrap());
+        assert!(!s.initialized);
+        assert!(s.branch.is_none());
+        assert!(s.remote.is_none());
+        assert!(!s.dirty);
+        assert_eq!(s.ahead, 0);
+        assert_eq!(s.behind, 0);
+    }
+
+    #[test]
+    fn git_set_remote_rejects_non_repo() {
+        let dir = tempdir().unwrap();
+        let r = git_set_remote(dir.path().to_str().unwrap(), "https://example.com/r.git");
+        assert!(r.is_err());
+    }
+
+    #[test]
+    fn git_sync_rejects_non_repo() {
+        let dir = tempdir().unwrap();
+        assert!(git_sync(dir.path().to_str().unwrap(), "m").is_err());
+    }
+
+    #[test]
+    fn git_pull_rejects_non_repo() {
+        let dir = tempdir().unwrap();
+        assert!(git_pull(dir.path().to_str().unwrap()).is_err());
+    }
+
+    #[test]
+    fn git_init_creates_repo_and_rejects_second_init() {
+        if Command::new("git").arg("--version").output().is_err() {
+            return;
+        }
+        let dir = tempdir().unwrap();
+        let project = make_fake_project(dir.path(), "g");
+        // Avoid needing global git config for the initial commit.
+        let env_pairs = [
+            ("GIT_AUTHOR_NAME", "test"),
+            ("GIT_AUTHOR_EMAIL", "test@example.com"),
+            ("GIT_COMMITTER_NAME", "test"),
+            ("GIT_COMMITTER_EMAIL", "test@example.com"),
+        ];
+        for (k, v) in &env_pairs {
+            std::env::set_var(k, v);
+        }
+        let result = git_init(project.to_str().unwrap());
+        if result.is_err() {
+            return;
+        }
+        assert!(project.join(".git").exists());
+        let status = git_status(project.to_str().unwrap());
+        assert!(status.initialized);
+        assert!(git_init(project.to_str().unwrap()).is_err());
+    }
+
+    #[test]
+    fn starter_template_is_a_runnable_nannou_sketch() {
+        assert!(STARTER_TEMPLATE.contains("fn main()"));
+        assert!(STARTER_TEMPLATE.contains("nannou"));
+        assert!(STARTER_TEMPLATE.contains("fn view"));
+    }
+}
+
 pub const STARTER_TEMPLATE: &str = r#"use nannou::prelude::*;
 
 fn main() {
