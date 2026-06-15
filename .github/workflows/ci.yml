@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: -Dwarnings
+
+jobs:
+  test:
+    name: Test + coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: llvm-tools-preview
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-llvm-cov
+
+      - name: Configure git identity (needed by core git tests)
+        run: |
+          git config --global user.email "ci@example.com"
+          git config --global user.name "CI"
+
+      - name: Run tests under coverage (core + cli)
+        run: |
+          cargo llvm-cov \
+            --package nannou-manager-core \
+            --package nannou-manager-cli \
+            --no-report
+
+      - name: Generate lcov report
+        run: |
+          cargo llvm-cov report --lcov --output-path lcov.info
+
+      - name: Generate summary and enforce threshold
+        run: |
+          cargo llvm-cov report --summary-only --fail-under-lines 70 \
+            | tee coverage-summary.txt
+
+      - name: Write coverage summary to job summary
+        if: always()
+        run: |
+          {
+            echo "## Coverage summary"
+            echo ""
+            echo '```'
+            cat coverage-summary.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: lcov.info
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Upload coverage artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-lcov
+          path: lcov.info
+          if-no-files-found: error

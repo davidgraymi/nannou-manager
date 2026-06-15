@@ -178,6 +178,11 @@ pub fn open_in_editor(editor: &str, path: &str) -> Result<(), String> {
 }
 
 pub fn config_path() -> PathBuf {
+    if let Ok(custom) = std::env::var("NANNOU_MANAGER_CONFIG") {
+        if !custom.is_empty() {
+            return PathBuf::from(custom);
+        }
+    }
     dirs::config_dir()
         .unwrap_or_else(|| PathBuf::from("."))
         .join("nannou-manager/config.json")
