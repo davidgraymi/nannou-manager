@@ -95,6 +95,19 @@ html, body {
   overflow: hidden;
 }
 
+/* ─── Native title bar (overlay style on macOS) ───
+   A draggable strip behind the traffic lights so the sidebar background
+   flows up to the top of the window without a seam. */
+.titlebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 28px;
+  z-index: 10;
+  -webkit-app-region: drag;
+}
+
 /* ─── Sidebar ─── */
 
 .sidebar {
@@ -110,7 +123,7 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 12px 10px;
+  padding: 42px 12px 10px;
   border-bottom: 1px solid var(--sidebar-border);
 }
 
@@ -314,7 +327,7 @@ html, body {
 }
 
 .project-detail {
-  padding: 36px 40px;
+  padding: 52px 40px 36px;
   max-width: 720px;
   display: flex;
   flex-direction: column;
@@ -708,22 +721,41 @@ html, body {
   word-break: break-word;
 }
 
-.compiling-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--accent);
+.list-compile-ring {
+  width: 14px;
+  height: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
-  animation: compiling-pulse 1s ease-in-out infinite;
 }
 
-.project-item.selected .compiling-dot {
-  background: rgba(255, 255, 255, 0.8);
+.list-compile-ring svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
 }
 
-@keyframes compiling-pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.4; transform: scale(0.7); }
+.list-compile-ring-bg {
+  fill: none;
+  stroke: var(--btn-border);
+  stroke-width: 3;
+}
+
+.list-compile-ring-fg {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 3;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.25s ease-out;
+}
+
+.project-item.selected .list-compile-ring-bg {
+  stroke: rgba(255, 255, 255, 0.3);
+}
+
+.project-item.selected .list-compile-ring-fg {
+  stroke: rgba(255, 255, 255, 0.9);
 }
 
 /* ─── Scrollbar ─── */

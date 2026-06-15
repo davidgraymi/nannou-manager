@@ -135,7 +135,8 @@ fn replace_package_name(toml: &str, new_name: &str) -> String {
 
 fn copy_dir_skipping(src: &Path, dst: &Path, skip: &[&str]) -> Result<(), String> {
     std::fs::create_dir_all(dst).map_err(|e| format!("Failed to create {}: {e}", dst.display()))?;
-    let entries = std::fs::read_dir(src).map_err(|e| format!("Failed to read {}: {e}", src.display()))?;
+    let entries =
+        std::fs::read_dir(src).map_err(|e| format!("Failed to read {}: {e}", src.display()))?;
     for entry in entries.flatten() {
         let name = entry.file_name();
         let name_str = name.to_string_lossy();
@@ -144,7 +145,9 @@ fn copy_dir_skipping(src: &Path, dst: &Path, skip: &[&str]) -> Result<(), String
         }
         let path = entry.path();
         let target = dst.join(&name);
-        let ft = entry.file_type().map_err(|e| format!("file_type error: {e}"))?;
+        let ft = entry
+            .file_type()
+            .map_err(|e| format!("file_type error: {e}"))?;
         if ft.is_dir() {
             copy_dir_skipping(&path, &target, skip)?;
         } else if ft.is_symlink() {
@@ -252,10 +255,7 @@ pub fn git_status(path: &str) -> GitStatus {
         status.dirty = !porcelain.trim().is_empty();
     }
     if status.remote.is_some() {
-        if let Ok(counts) = git(
-            &["rev-list", "--left-right", "--count", "@{u}...HEAD"],
-            &p,
-        ) {
+        if let Ok(counts) = git(&["rev-list", "--left-right", "--count", "@{u}...HEAD"], &p) {
             let parts: Vec<&str> = counts.split_whitespace().collect();
             if parts.len() == 2 {
                 status.behind = parts[0].parse().unwrap_or(0);

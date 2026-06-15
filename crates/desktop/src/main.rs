@@ -171,11 +171,7 @@ async fn git_pull_cmd(name: String) -> Result<GitStatus, String> {
 }
 
 #[tauri::command]
-fn compile_and_run_cmd(
-    name: String,
-    state: State<AppState>,
-    app: AppHandle,
-) -> Result<(), String> {
+fn compile_and_run_cmd(name: String, state: State<AppState>, app: AppHandle) -> Result<(), String> {
     if state.compiling.lock().unwrap().contains_key(&name) {
         return Ok(());
     }

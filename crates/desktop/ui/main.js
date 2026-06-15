@@ -112,6 +112,7 @@
           compilingState.set(name, { artifacts: 0, startTime: Date.now(), animId: null, error: null });
         }
       }
+      for (const name of comp) startRingLoop(name);
     } catch (e) {
       console.error("Failed to load projects:", e);
       projects = [];
@@ -119,12 +120,20 @@
     }
     renderAll();
   }
+  function setsEqual(a, b) {
+    if (a.size !== b.size) return false;
+    for (const v of a) if (!b.has(v)) return false;
+    return true;
+  }
   async function pollRunning() {
     try {
       const names = await invoke("get_running");
-      running = new Set(names);
+      const next = new Set(names);
+      if (setsEqual(running, next)) return;
+      const selectedChanged = selected && running.has(selected.name) !== next.has(selected.name);
+      running = next;
       renderSidebar();
-      if (selected && !compilingState.has(selected.name)) renderContent();
+      if (selectedChanged && !compilingState.has(selected.name)) renderContent();
     } catch (e) {
     }
   }
@@ -143,7 +152,6 @@
     const state = compilingState.get(name);
     if (state) state.artifacts = artifacts;
     if (selected?.name === name) updateRingDisplay(name);
-    renderSidebar();
   });
   listen("compile-result", (event) => {
     const { name, success, cancelled, error } = event.payload;
@@ -173,8 +181,10 @@
     return Math.max(timeFraction, artifactFraction);
   }
   function setRingProgress(name, progress) {
-    const fg = document.getElementById(`ring-fg-${name}`);
-    if (fg) fg.style.strokeDashoffset = RING_CIRCUMFERENCE * (1 - progress);
+    const offset = RING_CIRCUMFERENCE * (1 - progress);
+    document.querySelectorAll(`.ring-fg[data-ring-name="${CSS.escape(name)}"]`).forEach((fg) => {
+      fg.style.strokeDashoffset = offset;
+    });
   }
   function statusIndicatorHtml(nameAttr, state) {
     return `
@@ -182,13 +192,26 @@
       <span class="status-indicator-ring-wrap">
         <svg class="status-indicator-ring" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
           <circle class="status-indicator-ring-bg" cx="12" cy="12" r="${RING_RADIUS}"/>
-          <circle class="status-indicator-ring-fg" id="ring-fg-${nameAttr}" cx="12" cy="12" r="${RING_RADIUS}"
+          <circle class="status-indicator-ring-fg ring-fg" data-ring-name="${nameAttr}" cx="12" cy="12" r="${RING_RADIUS}"
             stroke-dasharray="${RING_CIRCUMFERENCE} ${RING_CIRCUMFERENCE}"
             stroke-dashoffset="${RING_CIRCUMFERENCE}"/>
         </svg>
         <span class="status-indicator-dot"></span>
       </span>
       <span class="status-indicator-label">${state === "compiling" ? "Compiling" : "Running"}</span>
+    </span>
+  `;
+  }
+  function compileRingHtml(name, nameAttr) {
+    const offset = RING_CIRCUMFERENCE * (1 - ringProgress(name));
+    return `
+    <span class="list-compile-ring" title="Compiling">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <circle class="list-compile-ring-bg" cx="12" cy="12" r="${RING_RADIUS}"/>
+        <circle class="list-compile-ring-fg ring-fg" data-ring-name="${nameAttr}" cx="12" cy="12" r="${RING_RADIUS}"
+          stroke-dasharray="${RING_CIRCUMFERENCE} ${RING_CIRCUMFERENCE}"
+          stroke-dashoffset="${offset}"/>
+      </svg>
     </span>
   `;
   }
@@ -224,7 +247,7 @@
       const isSelected = selected?.name === project.name;
       const item = document.createElement("div");
       item.className = "project-item" + (isSelected ? " selected" : "");
-      const status = isRunning ? '<span class="running-dot" title="Running"></span>' : isCompiling ? '<span class="compiling-dot" title="Compiling"></span>' : "";
+      const status = isRunning ? '<span class="running-dot" title="Running"></span>' : isCompiling ? compileRingHtml(project.name, escHtml(project.name)) : "";
       const primaryAction = isRunning || isCompiling ? `<button class="hover-btn stop-btn" title="Stop" data-act="stop">${icon("square", { size: 13, fill: "currentColor" })}</button>` : `<button class="hover-btn run-btn" title="Run" data-act="run">${icon("play", { size: 13, fill: "currentColor" })}</button>`;
       item.innerHTML = `
       <span class="project-item-name">${escHtml(project.name)}</span>
