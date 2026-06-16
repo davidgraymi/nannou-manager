@@ -39,7 +39,7 @@ fn make_project(dir: &Path, name: &str) {
 }
 
 fn run(sb: &Sandbox) -> Command {
-    let mut cmd = Command::cargo_bin("nannou-manager").unwrap();
+    let mut cmd = Command::cargo_bin("nou").unwrap();
     cmd.env("NANNOU_MANAGER_CONFIG", &sb.config_file);
     cmd
 }

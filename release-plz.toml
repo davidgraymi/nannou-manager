@@ -1,0 +1,27 @@
+# release-plz config: single shared version, GitHub releases only (no crates.io).
+# See https://release-plz.dev/docs/config
+
+[workspace]
+# All crates in this workspace are versioned and released together as one tag.
+release_always = false
+publish = false              # do not publish to crates.io
+git_release_enable = true    # cut a GitHub release
+git_tag_enable = true
+# Use a single tag like `v0.2.0` for the whole workspace instead of per-crate tags.
+git_tag_name = "v{{ version }}"
+git_release_name = "v{{ version }}"
+# Keep all crate versions locked together.
+dependencies_update = true
+semver_check = false
+
+[[package]]
+name = "nannou-manager-core"
+changelog_update = true
+
+[[package]]
+name = "nannou-manager-cli"
+changelog_update = true
+
+[[package]]
+name = "nannou-manager-desktop"
+changelog_update = true
