@@ -83,6 +83,15 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: npm
+          cache-dependency-path: crates/desktop/ui/package-lock.json
+
+      - name: Build UI bundle
+        shell: bash
+        working-directory: crates/desktop/ui
+        run: |
+          npm ci
+          npm run build
 
       # ---------- CLI ----------
       - name: Build CLI
