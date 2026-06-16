@@ -3,13 +3,14 @@ use nannou_manager_core::*;
 
 #[derive(Parser)]
 #[command(
-    name = "nannou-manager",
+    name = "nou",
     about = "Manage nannou creative coding projects",
+    long_about = "Manage nannou creative coding projects.\n\nRun without a subcommand to launch the Nannou Manager desktop app.",
     version
 )]
 struct Cli {
     #[command(subcommand)]
-    command: Commands,
+    command: Option<Commands>,
 }
 
 #[derive(Subcommand)]
@@ -173,6 +174,37 @@ fn confirm(prompt: &str) -> bool {
     matches!(buf.trim(), "y" | "Y" | "yes" | "YES")
 }
 
+fn launch_gui() -> Result<(), String> {
+    use std::process::Command;
+
+    #[cfg(target_os = "macos")]
+    {
+        let app_name = "Nannou Manager";
+        Command::new("open")
+            .args(["-a", app_name])
+            .status()
+            .map_err(|e| format!("failed to launch {app_name}: {e}"))
+            .and_then(|s| {
+                if s.success() {
+                    Ok(())
+                } else {
+                    Err(format!(
+                        "{app_name} is not installed. Install via `brew install --cask davidgraymi/tap/nannou-manager` or download from the releases page."
+                    ))
+                }
+            })
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    {
+        let bin_name = "nannou-manager-desktop";
+        Command::new(bin_name)
+            .spawn()
+            .map(|_| ())
+            .map_err(|e| format!("failed to launch {bin_name}: {e}. Is the desktop app installed and on PATH?"))
+    }
+}
+
 fn print_git_status(status: &GitStatus) {
     if !status.initialized {
         println!("No git repository");
@@ -240,7 +272,12 @@ fn main() {
     let cli = Cli::parse();
     let config = load_config();
 
-    match cli.command {
+    let Some(command) = cli.command else {
+        unwrap_or_exit(launch_gui());
+        return;
+    };
+
+    match command {
         Commands::List => {
             let projects = scan_projects(&config.projects_dir);
             if projects.is_empty() {
