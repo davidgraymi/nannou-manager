@@ -23,9 +23,10 @@ CLI binary:
 cargo run -p nannou-manager-cli -- <subcommand>
 ```
 
-Desktop app (requires Tauri prerequisites; not part of the workspace test run):
+Desktop app (requires Tauri prerequisites; not part of the workspace test run). The UI bundle (`crates/desktop/ui/main.js`) is gitignored and built by esbuild — build it first:
 
 ```bash
+(cd crates/desktop/ui && npm ci && npm run build)
 cargo run -p nannou-manager-desktop
 ```
 
