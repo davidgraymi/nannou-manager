@@ -117,10 +117,7 @@ fn delete_missing_project_exits_nonzero() {
 fn delete_existing_project_removes_directory() {
     let sb = sandbox();
     make_project(&sb.projects, "doomed");
-    run(&sb)
-        .args(["delete", "doomed", "-y"])
-        .assert()
-        .success();
+    run(&sb).args(["delete", "doomed", "-y"]).assert().success();
     assert!(!sb.projects.join("doomed").exists());
 }
 

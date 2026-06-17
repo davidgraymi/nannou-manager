@@ -12,8 +12,16 @@ description = "CLI for managing nannou projects"
 name = "nou"
 path = "src/main.rs"
 
+[features]
+# Headless by default so `cargo install nannou-manager-cli` always builds
+# (no Tauri / system webview deps). Opt into the GUI with `--features desktop`;
+# distribution packages (e.g. the Homebrew cask) build with it enabled.
+default = []
+desktop = ["dep:nannou-manager-desktop"]
+
 [dependencies]
 nannou-manager-core = { path = "../core", version = "0.1.0" }
+nannou-manager-desktop = { path = "../desktop", version = "0.1.0", optional = true }
 clap = { version = "4", features = ["derive"] }
 
 [dev-dependencies]
