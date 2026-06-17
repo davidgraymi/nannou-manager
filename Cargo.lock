@@ -1953,7 +1953,7 @@ dependencies = [
 
 [[package]]
 name = "nannou-manager-cli"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "assert_cmd",
  "clap",
@@ -1966,7 +1966,7 @@ dependencies = [
 
 [[package]]
 name = "nannou-manager-core"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "dirs 5.0.1",
  "serde",
@@ -1976,7 +1976,7 @@ dependencies = [
 
 [[package]]
 name = "nannou-manager-desktop"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "nannou-manager-core",
  "serde",
