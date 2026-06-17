@@ -9,7 +9,7 @@ homepage.workspace = true
 description = "Tauri desktop app for managing nannou projects"
 
 [dependencies]
-nannou-manager-core = { path = "../core", version = "0.1.0" }
+nannou-manager-core = { path = "../core", version = "0.1.1" }
 tauri = { version = "2", features = [] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
