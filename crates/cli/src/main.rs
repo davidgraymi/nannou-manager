@@ -174,35 +174,22 @@ fn confirm(prompt: &str) -> bool {
     matches!(buf.trim(), "y" | "Y" | "yes" | "YES")
 }
 
-fn launch_gui() -> Result<(), String> {
-    use std::process::Command;
+/// Launch the desktop UI in-process. Present only when built with the
+/// `desktop` feature; headless builds get the stub below instead.
+#[cfg(feature = "desktop")]
+fn launch_gui() {
+    nannou_manager_desktop::run();
+}
 
-    #[cfg(target_os = "macos")]
-    {
-        let app_name = "Nannou Manager";
-        Command::new("open")
-            .args(["-a", app_name])
-            .status()
-            .map_err(|e| format!("failed to launch {app_name}: {e}"))
-            .and_then(|s| {
-                if s.success() {
-                    Ok(())
-                } else {
-                    Err(format!(
-                        "{app_name} is not installed. Install via `brew install --cask davidgraymi/tap/nannou-manager` or download from the releases page."
-                    ))
-                }
-            })
-    }
-
-    #[cfg(not(target_os = "macos"))]
-    {
-        let bin_name = "nannou-manager-desktop";
-        Command::new(bin_name)
-            .spawn()
-            .map(|_| ())
-            .map_err(|e| format!("failed to launch {bin_name}: {e}. Is the desktop app installed and on PATH?"))
-    }
+#[cfg(not(feature = "desktop"))]
+fn launch_gui() {
+    eprintln!(
+        "This build of `nou` does not include the desktop UI.\n\
+         Reinstall with `cargo install nannou-manager-cli --features desktop`, \
+         install the desktop package (`brew install --cask davidgraymi/tap/nannou-manager`), \
+         or run a subcommand (try `nou --help`)."
+    );
+    std::process::exit(2);
 }
 
 fn print_git_status(status: &GitStatus) {
@@ -273,7 +260,7 @@ fn main() {
     let config = load_config();
 
     let Some(command) = cli.command else {
-        unwrap_or_exit(launch_gui());
+        launch_gui();
         return;
     };
 
