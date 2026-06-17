@@ -157,7 +157,7 @@ fn unwrap_or_exit<T>(result: Result<T, String>) -> T {
 fn name_from_git_url(url: &str) -> String {
     let cleaned = url.trim().trim_end_matches('/').trim_end_matches(".git");
     let cut = cleaned
-        .rfind(|c| c == '/' || c == ':')
+        .rfind(['/', ':'])
         .map(|i| i + 1)
         .unwrap_or(0);
     cleaned[cut..].to_string()
@@ -202,10 +202,7 @@ fn print_git_status(status: &GitStatus) {
         status.branch.as_deref().unwrap_or("(detached)")
     );
     println!("Remote  : {}", status.remote.as_deref().unwrap_or("(none)"));
-    println!(
-        "Working : {}",
-        if status.dirty { "dirty" } else { "clean" }
-    );
+    println!("Working : {}", if status.dirty { "dirty" } else { "clean" });
     if status.remote.is_some() {
         println!("Ahead   : {}", status.ahead);
         println!("Behind  : {}", status.behind);
@@ -238,7 +235,10 @@ mod tests {
 
     #[test]
     fn url_with_surrounding_whitespace() {
-        assert_eq!(name_from_git_url("  https://github.com/foo/bar.git \n"), "bar");
+        assert_eq!(
+            name_from_git_url("  https://github.com/foo/bar.git \n"),
+            "bar"
+        );
     }
 
     #[test]

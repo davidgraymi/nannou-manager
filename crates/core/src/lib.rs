@@ -445,11 +445,7 @@ mod tests {
         let dir = tempdir().unwrap();
         let bogus = dir.path().join("bogus");
         std::fs::create_dir_all(&bogus).unwrap();
-        let result = copy_project(
-            bogus.to_str().unwrap(),
-            dir.path().to_str().unwrap(),
-            "out",
-        );
+        let result = copy_project(bogus.to_str().unwrap(), dir.path().to_str().unwrap(), "out");
         assert!(result.is_err());
     }
 
@@ -458,11 +454,7 @@ mod tests {
         let dir = tempdir().unwrap();
         let src = make_fake_project(dir.path(), "orig");
         make_fake_project(dir.path(), "taken");
-        let result = copy_project(
-            src.to_str().unwrap(),
-            dir.path().to_str().unwrap(),
-            "taken",
-        );
+        let result = copy_project(src.to_str().unwrap(), dir.path().to_str().unwrap(), "taken");
         assert!(result.is_err());
     }
 
