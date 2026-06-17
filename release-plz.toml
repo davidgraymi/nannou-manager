@@ -5,8 +5,9 @@
 # All crates in this workspace are versioned and released together as one tag.
 release_always = false
 publish = false              # do not publish to crates.io
-git_release_enable = true    # cut a GitHub release
-git_tag_enable = true
+# Off at the workspace level; only `nannou-manager-core` cuts the shared tag/release.
+git_release_enable = false
+git_tag_enable = false
 # Use a single tag like `v0.2.0` for the whole workspace instead of per-crate tags.
 git_tag_name = "v{{ version }}"
 git_release_name = "v{{ version }}"
@@ -17,6 +18,8 @@ semver_check = false
 [[package]]
 name = "nannou-manager-core"
 changelog_update = true
+git_tag_enable = true
+git_release_enable = true
 
 [[package]]
 name = "nannou-manager-cli"
