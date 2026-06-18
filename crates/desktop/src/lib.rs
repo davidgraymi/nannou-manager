@@ -314,6 +314,39 @@ async fn save_config_cmd(config: Config) -> Result<Vec<ProjectInfo>, String> {
     .await?
 }
 
+/// Build and run the Tauri desktop application. Called from this crate's own
+/// `main.rs` binary and, when the CLI is built with `--features desktop`, from
+/// the `nou` binary for an in-process GUI launch.
+pub fn run() {
+    tauri::Builder::default()
+        .manage(AppState {
+            running: Arc::new(Mutex::new(HashMap::new())),
+            compiling: Arc::new(Mutex::new(HashMap::new())),
+        })
+        .invoke_handler(tauri::generate_handler![
+            list_projects,
+            get_running,
+            get_compiling,
+            create_project_cmd,
+            clone_project_cmd,
+            delete_project_cmd,
+            copy_project_cmd,
+            git_status_cmd,
+            git_init_cmd,
+            git_set_remote_cmd,
+            git_sync_cmd,
+            git_pull_cmd,
+            compile_and_run_cmd,
+            stop_compile_cmd,
+            stop_project_cmd,
+            open_project_cmd,
+            get_config_cmd,
+            save_config_cmd,
+        ])
+        .run(tauri::generate_context!())
+        .expect("error while running tauri application");
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -379,37 +412,4 @@ mod tests {
         assert!(state.running.lock().unwrap().is_empty());
         assert!(state.compiling.lock().unwrap().is_empty());
     }
-}
-
-/// Build and run the Tauri desktop application. Called from this crate's own
-/// `main.rs` binary and, when the CLI is built with `--features desktop`, from
-/// the `nou` binary for an in-process GUI launch.
-pub fn run() {
-    tauri::Builder::default()
-        .manage(AppState {
-            running: Arc::new(Mutex::new(HashMap::new())),
-            compiling: Arc::new(Mutex::new(HashMap::new())),
-        })
-        .invoke_handler(tauri::generate_handler![
-            list_projects,
-            get_running,
-            get_compiling,
-            create_project_cmd,
-            clone_project_cmd,
-            delete_project_cmd,
-            copy_project_cmd,
-            git_status_cmd,
-            git_init_cmd,
-            git_set_remote_cmd,
-            git_sync_cmd,
-            git_pull_cmd,
-            compile_and_run_cmd,
-            stop_compile_cmd,
-            stop_project_cmd,
-            open_project_cmd,
-            get_config_cmd,
-            save_config_cmd,
-        ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
 }
