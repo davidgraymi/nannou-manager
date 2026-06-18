@@ -23,24 +23,32 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # cli_features: build `nou` with the in-process desktop UI so a bare
+          # `nou` launches the GUI. Enabled on macOS only (WebKit is system-provided,
+          # so no extra runtime deps); left empty on Linux/Windows to keep the CLI
+          # archives headless (enabling it would require libwebkit2gtk at runtime).
           - name: macos-aarch64
             runner: macos-14
             target: aarch64-apple-darwin
             tauri_args: --target aarch64-apple-darwin --bundles app
             dmg_arch: aarch64
+            cli_features: desktop
           - name: macos-x86_64
             runner: macos-13
             target: x86_64-apple-darwin
             tauri_args: --target x86_64-apple-darwin --bundles app
             dmg_arch: x64
+            cli_features: desktop
           - name: linux-x86_64
             runner: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
-            tauri_args: --bundles deb,rpm,appimage
+            tauri_args: --target x86_64-unknown-linux-gnu --bundles deb,rpm,appimage
+            cli_features: ""
           - name: windows-x86_64
             runner: windows-latest
             target: x86_64-pc-windows-msvc
-            tauri_args: --bundles msi
+            tauri_args: --target x86_64-pc-windows-msvc --bundles msi
+            cli_features: ""
 
     steps:
       - uses: actions/checkout@v4
@@ -96,7 +104,16 @@ jobs:
       # ---------- CLI ----------
       - name: Build CLI
         shell: bash
-        run: cargo build --release --locked -p nannou-manager-cli --target ${{ matrix.target }}
+        run: |
+          set -euo pipefail
+          features="${{ matrix.cli_features }}"
+          if [ -n "$features" ]; then
+            cargo build --release --locked -p nannou-manager-cli \
+              --target ${{ matrix.target }} --features "$features"
+          else
+            cargo build --release --locked -p nannou-manager-cli \
+              --target ${{ matrix.target }}
+          fi
 
       - name: Package CLI archive
         shell: bash
@@ -105,13 +122,19 @@ jobs:
           version="${{ steps.tag.outputs.version }}"
           name="nou-${version}-${{ matrix.target }}"
           mkdir -p dist
+          dist_dir="$(pwd)/dist"
           if [ "${{ runner.os }}" = "Windows" ]; then
             bin="target/${{ matrix.target }}/release/nou.exe"
-            archive="dist/${name}.zip"
-            7z a "$archive" "$bin" README.md
+            archive="${dist_dir}/${name}.zip"
+            # Stage files flat so the zip extracts to `nou.exe` at the root rather
+            # than preserving the `target/.../release/` path (7z has no -C flag).
+            tmpdir=$(mktemp -d)
+            cp "$bin" "$tmpdir/"
+            cp README.md "$tmpdir/"
+            ( cd "$tmpdir" && 7z a "$archive" nou.exe README.md )
           else
             bin="target/${{ matrix.target }}/release/nou"
-            archive="dist/${name}.tar.gz"
+            archive="${dist_dir}/${name}.tar.gz"
             tmpdir=$(mktemp -d)
             cp "$bin" "$tmpdir/"
             cp README.md "$tmpdir/"
@@ -119,17 +142,24 @@ jobs:
           fi
 
       # ---------- Desktop (Tauri) ----------
+      # We invoke the Tauri CLI directly instead of tauri-action: this repo has no
+      # `@tauri-apps/cli` npm dep for the action to detect, so tauri-action silently
+      # built nothing ("No artifacts were found") and left target/.../bundle absent.
+      # The UI bundle is already built above; `cargo tauri build` just bundles it.
       # macOS: builds .app only (no DMG). We inject the CLI and build the DMG ourselves below.
       # Linux/Windows: builds the configured installer formats directly.
+      - name: Install Tauri CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! cargo tauri --version >/dev/null 2>&1; then
+            cargo install tauri-cli --version "^2.0" --locked
+          fi
+
       - name: Build desktop bundles
-        uses: tauri-apps/tauri-action@v0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          projectPath: crates/desktop
-          args: ${{ matrix.tauri_args }}
-          includeRelease: false
-          includeUpdaterJson: false
+        shell: bash
+        working-directory: crates/desktop
+        run: cargo tauri build ${{ matrix.tauri_args }}
 
       # ---------- macOS: inject CLI into .app and build DMG ----------
       - name: Inject CLI into .app and build DMG
@@ -140,10 +170,10 @@ jobs:
           version="${{ steps.tag.outputs.version }}"
           target="${{ matrix.target }}"
           dmg_arch="${{ matrix.dmg_arch }}"
-          app="crates/desktop/target/${target}/release/bundle/macos/Nannou Manager.app"
+          app="target/${target}/release/bundle/macos/Nannou Manager.app"
           if [ ! -d "$app" ]; then
             echo "Expected .app at: $app"
-            ls -R "crates/desktop/target/${target}/release/bundle" || true
+            ls -R "target/${target}/release/bundle" || true
             exit 1
           fi
 
@@ -177,7 +207,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p dist
-          base="crates/desktop/target/${{ matrix.target }}/release/bundle"
+          base="target/${{ matrix.target }}/release/bundle"
           find "$base" -maxdepth 3 -type f \
             \( -name '*.deb' -o -name '*.rpm' -o -name '*.AppImage' -o -name '*.msi' \) \
             -exec cp {} dist/ \;

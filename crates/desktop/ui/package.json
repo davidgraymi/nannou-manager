@@ -4,8 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "build": "esbuild src/main.js --bundle --format=iife --outfile=main.js",
-    "watch": "esbuild src/main.js --bundle --format=iife --outfile=main.js --watch"
+    "build": "esbuild src/main.js --bundle --format=iife --outfile=dist/main.js && esbuild index.html style.css --loader:.html=copy --loader:.css=copy --outdir=dist",
+    "watch": "esbuild index.html style.css --loader:.html=copy --loader:.css=copy --outdir=dist && esbuild src/main.js --bundle --format=iife --outfile=dist/main.js --watch"
   },
   "dependencies": {
     "lucide": "next"
