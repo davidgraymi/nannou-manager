@@ -206,52 +206,6 @@ fn print_git_status(status: &GitStatus) {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::name_from_git_url;
-
-    #[test]
-    fn https_url_with_git_suffix() {
-        assert_eq!(name_from_git_url("https://github.com/foo/bar.git"), "bar");
-    }
-
-    #[test]
-    fn https_url_without_git_suffix() {
-        assert_eq!(name_from_git_url("https://github.com/foo/bar"), "bar");
-    }
-
-    #[test]
-    fn ssh_url() {
-        assert_eq!(name_from_git_url("git@github.com:foo/bar.git"), "bar");
-    }
-
-    #[test]
-    fn url_with_trailing_slash() {
-        assert_eq!(name_from_git_url("https://github.com/foo/bar.git/"), "bar");
-    }
-
-    #[test]
-    fn url_with_surrounding_whitespace() {
-        assert_eq!(
-            name_from_git_url("  https://github.com/foo/bar.git \n"),
-            "bar"
-        );
-    }
-
-    #[test]
-    fn bare_repo_name() {
-        assert_eq!(name_from_git_url("bar.git"), "bar");
-    }
-
-    #[test]
-    fn nested_path() {
-        assert_eq!(
-            name_from_git_url("https://gitlab.com/group/sub/proj.git"),
-            "proj"
-        );
-    }
-}
-
 fn main() {
     let cli = Cli::parse();
     let config = load_config();
@@ -363,5 +317,51 @@ fn main() {
                 println!("Editor set to '{cmd}'");
             }
         },
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::name_from_git_url;
+
+    #[test]
+    fn https_url_with_git_suffix() {
+        assert_eq!(name_from_git_url("https://github.com/foo/bar.git"), "bar");
+    }
+
+    #[test]
+    fn https_url_without_git_suffix() {
+        assert_eq!(name_from_git_url("https://github.com/foo/bar"), "bar");
+    }
+
+    #[test]
+    fn ssh_url() {
+        assert_eq!(name_from_git_url("git@github.com:foo/bar.git"), "bar");
+    }
+
+    #[test]
+    fn url_with_trailing_slash() {
+        assert_eq!(name_from_git_url("https://github.com/foo/bar.git/"), "bar");
+    }
+
+    #[test]
+    fn url_with_surrounding_whitespace() {
+        assert_eq!(
+            name_from_git_url("  https://github.com/foo/bar.git \n"),
+            "bar"
+        );
+    }
+
+    #[test]
+    fn bare_repo_name() {
+        assert_eq!(name_from_git_url("bar.git"), "bar");
+    }
+
+    #[test]
+    fn nested_path() {
+        assert_eq!(
+            name_from_git_url("https://gitlab.com/group/sub/proj.git"),
+            "proj"
+        );
     }
 }
