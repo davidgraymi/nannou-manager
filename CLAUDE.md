@@ -23,7 +23,7 @@ CLI binary:
 cargo run -p nannou-manager-cli -- <subcommand>
 ```
 
-Desktop app (requires Tauri prerequisites; not part of the workspace test run). The UI bundle (`crates/desktop/ui/main.js`) is gitignored and built by esbuild — build it first:
+Desktop app (requires Tauri prerequisites; not part of the workspace test run). The UI bundle (`crates/desktop/ui/dist/`) is gitignored and built by esbuild — `frontendDist` in `tauri.conf.json` points at it. The folder must contain only web assets (esbuild copies `index.html`/`style.css` alongside the bundled `main.js`); Tauri rejects a `frontendDist` that includes `node_modules`. Build it first:
 
 ```bash
 (cd crates/desktop/ui && npm ci && npm run build)
