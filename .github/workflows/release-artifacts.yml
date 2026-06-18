@@ -36,11 +36,11 @@ jobs:
           - name: linux-x86_64
             runner: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
-            tauri_args: --bundles deb,rpm,appimage
+            tauri_args: --target x86_64-unknown-linux-gnu --bundles deb,rpm,appimage
           - name: windows-x86_64
             runner: windows-latest
             target: x86_64-pc-windows-msvc
-            tauri_args: --bundles msi
+            tauri_args: --target x86_64-pc-windows-msvc --bundles msi
 
     steps:
       - uses: actions/checkout@v4
@@ -140,10 +140,10 @@ jobs:
           version="${{ steps.tag.outputs.version }}"
           target="${{ matrix.target }}"
           dmg_arch="${{ matrix.dmg_arch }}"
-          app="crates/desktop/target/${target}/release/bundle/macos/Nannou Manager.app"
+          app="target/${target}/release/bundle/macos/Nannou Manager.app"
           if [ ! -d "$app" ]; then
             echo "Expected .app at: $app"
-            ls -R "crates/desktop/target/${target}/release/bundle" || true
+            ls -R "target/${target}/release/bundle" || true
             exit 1
           fi
 
@@ -177,7 +177,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p dist
-          base="crates/desktop/target/${{ matrix.target }}/release/bundle"
+          base="target/${{ matrix.target }}/release/bundle"
           find "$base" -maxdepth 3 -type f \
             \( -name '*.deb' -o -name '*.rpm' -o -name '*.AppImage' -o -name '*.msi' \) \
             -exec cp {} dist/ \;
