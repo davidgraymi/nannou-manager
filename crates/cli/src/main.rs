@@ -156,10 +156,7 @@ fn unwrap_or_exit<T>(result: Result<T, String>) -> T {
 
 fn name_from_git_url(url: &str) -> String {
     let cleaned = url.trim().trim_end_matches('/').trim_end_matches(".git");
-    let cut = cleaned
-        .rfind(['/', ':'])
-        .map(|i| i + 1)
-        .unwrap_or(0);
+    let cut = cleaned.rfind(['/', ':']).map(|i| i + 1).unwrap_or(0);
     cleaned[cut..].to_string()
 }
 
