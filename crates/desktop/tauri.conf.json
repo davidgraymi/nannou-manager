@@ -3,7 +3,7 @@
   "productName": "Nannou Manager",
   "identifier": "com.nannou-manager",
   "build": {
-    "frontendDist": "ui/dist"
+    "frontendDist": "./dist"
   },
   "app": {
     "withGlobalTauri": true,
