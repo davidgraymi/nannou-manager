@@ -27,17 +27,14 @@ jobs:
           # `nou` launches the GUI. Enabled on macOS only (WebKit is system-provided,
           # so no extra runtime deps); left empty on Linux/Windows to keep the CLI
           # archives headless (enabling it would require libwebkit2gtk at runtime).
+          # Apple Silicon (arm64) only. GitHub's free tier no longer offers an
+          # x86_64 macOS runner (macos-13 is gone), so we don't ship Intel macOS
+          # artifacts; the Homebrew formula/cask carry arm64-only macOS blocks.
           - name: macos-aarch64
             runner: macos-14
             target: aarch64-apple-darwin
             tauri_args: --target aarch64-apple-darwin --bundles app
             dmg_arch: aarch64
-            cli_features: desktop
-          - name: macos-x86_64
-            runner: macos-13
-            target: x86_64-apple-darwin
-            tauri_args: --target x86_64-apple-darwin --bundles app
-            dmg_arch: x64
             cli_features: desktop
           - name: linux-x86_64
             runner: ubuntu-22.04
@@ -251,10 +248,8 @@ jobs:
           }
           {
             echo "mac_arm64_sha=$(fetch "nou-${VERSION}-aarch64-apple-darwin.tar.gz")"
-            echo "mac_x86_64_sha=$(fetch "nou-${VERSION}-x86_64-apple-darwin.tar.gz")"
             echo "linux_x86_64_sha=$(fetch "nou-${VERSION}-x86_64-unknown-linux-gnu.tar.gz")"
             echo "dmg_arm64_sha=$(fetch "Nannou-Manager_${VERSION}_aarch64.dmg")"
-            echo "dmg_x86_64_sha=$(fetch "Nannou-Manager_${VERSION}_x64.dmg")"
           } >> "$GITHUB_OUTPUT"
 
       - name: Check out tap
@@ -269,10 +264,8 @@ jobs:
           VERSION: ${{ steps.ver.outputs.version }}
           REPO: ${{ github.repository }}
           MAC_ARM_SHA: ${{ steps.sums.outputs.mac_arm64_sha }}
-          MAC_X86_SHA: ${{ steps.sums.outputs.mac_x86_64_sha }}
           LINUX_X86_SHA: ${{ steps.sums.outputs.linux_x86_64_sha }}
           DMG_ARM_SHA: ${{ steps.sums.outputs.dmg_arm64_sha }}
-          DMG_X86_SHA: ${{ steps.sums.outputs.dmg_x86_64_sha }}
         run: |
           set -euo pipefail
           mkdir -p tap/Formula tap/Casks
@@ -289,10 +282,6 @@ jobs:
               on_arm do
                 url "${base}/nou-${VERSION}-aarch64-apple-darwin.tar.gz"
                 sha256 "${MAC_ARM_SHA}"
-              end
-              on_intel do
-                url "${base}/nou-${VERSION}-x86_64-apple-darwin.tar.gz"
-                sha256 "${MAC_X86_SHA}"
               end
             end
 
@@ -320,10 +309,6 @@ jobs:
             on_arm do
               url "${base}/Nannou-Manager_#{version}_aarch64.dmg"
               sha256 "${DMG_ARM_SHA}"
-            end
-            on_intel do
-              url "${base}/Nannou-Manager_#{version}_x64.dmg"
-              sha256 "${DMG_X86_SHA}"
             end
 
             name "Nannou Manager"
